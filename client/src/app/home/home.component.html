@@ -1,0 +1,21 @@
+<!-- Navbar -->
+<app-navbar [profile]="profile" [logOut]="logOut"></app-navbar>
+
+
+<!-- Contenido de la página -->
+<div>
+  <!-- Lista de chats -->
+  <div class="p-4">
+    <div class="grid grid-cols-1 gap-4">
+      @for (user of users; track user._id) {
+        <div [routerLink]="['/chats/users', user._id]" class="flex items-center p-4 bg-gray-900 rounded-lg shadow-md cursor-pointer">
+          <img [src]="user.picture" alt="Imagen de {{ user.name }}" class="w-12 h-12 mr-4 rounded-full">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-200">{{ user.name }}</h2>
+            <p class="text-gray-400">{{ user.email }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
