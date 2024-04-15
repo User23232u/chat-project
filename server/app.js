@@ -2,9 +2,10 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require('cors');
 const connectDB = require("./database/db");
-const { OAuth2Client } = require("google-auth-library");
+const { OAuth2Client, auth } = require("google-auth-library");
 const User = require("./models/User"); // Asegúrate de que este sea el camino correcto a tu modelo de usuario
 const userRoutes = require('./routes/userRoutes'); // Asegúrate de que este sea el camino correcto a tu archivo de rutas de usuario
+const authRoutes = require("./routes/authRoutes");
 
 require("dotenv").config();
 
@@ -54,6 +55,8 @@ app.post("/api/auth/google", async (req, res) => {
   });
 
 app.use('/api/users', userRoutes); // Usa las rutas de usuario en '/api/users'
+app.use('/auth', authRoutes);
+
 
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
