@@ -1,8 +1,8 @@
 export interface IMessage {
-  _id?: string;
+  _id: string;
   sender: string;
   // senderPicture: string;
   receiver: string;
   text: string;
-  createdAt?: Date;
+  createdAt: Date;
 }

@@ -18,8 +18,7 @@ import io, { Socket } from 'socket.io-client';
   styleUrl: './chat.component.css',
 })
 export class ChatComponent implements OnInit {
-
-
+  @ViewChild('bottom') private bottom!: ElementRef;
   messages: IMessage[] = [];
   sender?: IUser;
   receiver?: IUser;
@@ -52,21 +51,28 @@ export class ChatComponent implements OnInit {
 
     this.socket.on('chat message', (msg: IMessage | IMessage[]) => {
       if (Array.isArray(msg)) {
-        // Si el mensaje es un array, reemplaza todos los mensajes
         this.messages = msg;
       } else {
-        // Si el mensaje no es un array, añade el nuevo mensaje al final de la lista de mensajes
         this.messages.push(msg);
       }
+      this.scrollToBottom();
     });
   }
 
   sendMessage(): void {
     if (this.newMessage.trim() !== '' && this.sender && this.receiver) {
-      const msg: IMessage = { text: this.newMessage, sender: this.sender._id, receiver: this.receiver._id };
+      const msg: any = { text: this.newMessage, sender: this.sender._id, receiver: this.receiver._id, createdAt: new Date() };;
       this.socket.emit('chat message', msg);
       this.newMessage = '';
       this.messages.push(msg);
     }
+  }
+
+  ngAfterViewChecked(): void {
+    this.scrollToBottom();
+  }
+
+  scrollToBottom(): void {
+    this.bottom.nativeElement.scrollIntoView();
   }
 }

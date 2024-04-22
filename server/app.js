@@ -8,6 +8,7 @@ const Message = require("./models/Message"); // Asegúrate de tener este modelo
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const http = require("http");
+const { generateAuthToken } = require('./jwt/authToken');
 const socketIo = require("socket.io");
 let users = {};
 let userCount = 0;
@@ -27,13 +28,7 @@ const io = socketIo(server, {
 const client = new OAuth2Client(process.env.CLIENT_ID);
 
 app.use(morgan("dev"));
-app.use(
-  cors({
-    origin: "http://localhost:4200", // Aquí va la URL de tu cliente
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors());
 
 app.use(express.json());
 
@@ -45,8 +40,6 @@ app.get("/", (req, res) => {
 
 app.post("/api/auth/google", async (req, res) => {
   try {
-    console.log("Token:", req.body.token); // Log the token
-
     const token = req.body.token;
     const ticket = await client.verifyIdToken({
       idToken: token,
@@ -54,24 +47,27 @@ app.post("/api/auth/google", async (req, res) => {
     });
     const payload = ticket.getPayload();
 
-    console.log("Payload:", payload); // Log the payload
-
     let user = await User.findOne({ googleId: payload.sub });
-
-    console.log("User:", user); // Log the user
 
     if (!user) {
       user = new User({
         googleId: payload.sub,
         email: payload.email,
-        name: payload.name,
-        picture: payload.picture, // Guarda la URL de la imagen del perfil
+        username: payload.name,
+        picture: payload.picture,
       });
       await user.save();
-      console.log("User created:", user); // Log the user after it's created
     }
+
+    // Generar un token JWT para el usuario
+    const jwtToken = await generateAuthToken(user);
+
+    console.log('Token:', jwtToken);
+
+    // Enviar el token JWT al cliente
+    res.send({ token: jwtToken });
   } catch (error) {
-    console.error("Error:", error); // Log any errors
+    res.status(400).send(error);
   }
 });
 
@@ -117,6 +113,8 @@ io.on("connection", (socket) => {
   socket.on('chat message', async (msg) => {
     const message = new Message(msg);
     await message.save();
+
+    console.log("Message:", message);
   
     const receiverSocket = users[msg.receiver];
     if (receiverSocket) {

@@ -44,10 +44,10 @@ export class AuthGoogleService {
   }
 
   private sendTokenToServer(token: string): void {
-    console.log('Sending token to server:', token); // Imprime el token que se envía al servidor
-
     this.http.post('http://localhost:3000/api/auth/google', { token }).subscribe(
-      (res) => console.log('Response from server:', res),
+      (res: any) => {
+        localStorage.setItem('token', res.token);
+      },
       (err) => console.error('Error:', err)
     );
   }
