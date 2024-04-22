@@ -1,20 +1,41 @@
 const express = require("express");
 const morgan = require("morgan");
-const cors = require('cors');
+const cors = require("cors");
 const connectDB = require("./database/db");
-const { OAuth2Client, auth } = require("google-auth-library");
-const User = require("./models/User"); // Asegúrate de que este sea el camino correcto a tu modelo de usuario
-const userRoutes = require('./routes/userRoutes'); // Asegúrate de que este sea el camino correcto a tu archivo de rutas de usuario
+const { OAuth2Client } = require("google-auth-library");
+const User = require("./models/User");
+const Message = require("./models/Message"); // Asegúrate de tener este modelo
+const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
+const http = require("http");
+const socketIo = require("socket.io");
+let users = {};
+let userCount = 0;
 
 require("dotenv").config();
 
 const app = express();
-const client = new OAuth2Client(process.env.CLIENT_ID); // Asegúrate de que tu ID de cliente de Google esté en tus variables de entorno
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:4200",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  },
+});
+const client = new OAuth2Client(process.env.CLIENT_ID);
 
 app.use(morgan("dev"));
-app.use(cors());
-app.use(express.json()); // Necesario para poder parsear el cuerpo de las solicitudes POST
+app.use(
+  cors({
+    origin: "http://localhost:4200", // Aquí va la URL de tu cliente
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+app.use(express.json());
 
 connectDB();
 
@@ -23,41 +44,87 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/auth/google", async (req, res) => {
-    try {
-      console.log('Token:', req.body.token); // Log the token
-  
-      const token = req.body.token;
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: process.env.CLIENT_ID,
+  try {
+    console.log("Token:", req.body.token); // Log the token
+
+    const token = req.body.token;
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    console.log("Payload:", payload); // Log the payload
+
+    let user = await User.findOne({ googleId: payload.sub });
+
+    console.log("User:", user); // Log the user
+
+    if (!user) {
+      user = new User({
+        googleId: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture, // Guarda la URL de la imagen del perfil
       });
-      const payload = ticket.getPayload();
-  
-      console.log('Payload:', payload); // Log the payload
-  
-      let user = await User.findOne({ googleId: payload.sub });
-  
-      console.log('User:', user); // Log the user
-  
-      if (!user) {
-        user = new User({
-          googleId: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          picture: payload.picture, // Guarda la URL de la imagen del perfil
-        });
-        await user.save();
-        console.log('User created:', user); // Log the user after it's created
+      await user.save();
+      console.log("User created:", user); // Log the user after it's created
+    }
+  } catch (error) {
+    console.error("Error:", error); // Log any errors
+  }
+});
+
+app.use("/api/users", userRoutes);
+app.use("/auth", authRoutes);
+
+io.on("connection", (socket) => {
+  console.log("a user connected");
+  userCount++;
+  console.log("Number of connected users:", userCount);
+
+  // Cuando un usuario se conecta, guarda su socket en el objeto 'users'
+  socket.on('user connected', (userId) => {
+    users[userId] = socket;
+    socket.emit('user connected');
+  });
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+    userCount--;
+    console.log("Number of connected users:", userCount);
+    // Cuando un usuario se desconecta, elimina su socket del objeto 'users'
+    for (let userId in users) {
+      if (users[userId] === socket.id) {
+        delete users[userId];
+        break;
       }
-    } catch (error) {
-      console.error('Error:', error); // Log any errors
     }
   });
 
-app.use('/api/users', userRoutes); // Usa las rutas de usuario en '/api/users'
-app.use('/auth', authRoutes);
+  socket.on('get messages', async (data) => {
+    const messages = await Message.find({
+      $or: [
+        { sender: data.sender, receiver: data.receiver },
+        { sender: data.receiver, receiver: data.sender }
+      ]
+    });
 
+    console.log("Messages:", messages);
+  
+    socket.emit('chat message', messages);
+  });
+  socket.on('chat message', async (msg) => {
+    const message = new Message(msg);
+    await message.save();
+  
+    const receiverSocket = users[msg.receiver];
+    if (receiverSocket) {
+      receiverSocket.emit('chat message', msg);
+    }
+  });
+});
 
-app.listen(3000, () => {
+server.listen(3000, () => {
   console.log("Server is running on port 3000");
 });

@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { NavbarComponent } from '@components/navbar/navbar.component';
 import { AuthGoogleService } from '@services/auth-google.service';
+import { TokenService } from '@services/token.service';
 import { UserService } from '@services/user.service';
 import { IUser } from 'src/models/user.model';
 
@@ -33,9 +34,9 @@ export class HomeComponent implements OnInit {
 
     this.showData();
 
-    if (!this.profile) {
-      this.router.navigate(['/auth/login']);
-    }
+    // if (!this.profile) {
+    //   this.router.navigate(['/auth/login']);
+    // }
   }
 
   showData() {

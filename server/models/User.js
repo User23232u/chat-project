@@ -1,35 +1,27 @@
-
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const userSchema = new Schema({
   googleId: String,
-  name: {
-    type: String,
-    required: true
-  },
+  username: { type: String, required: true, unique: true },
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   password: String,
-  picture: String
+  picture: {
+    type: String,
+    default:
+      "https://t4.ftcdn.net/jpg/05/49/98/39/360_F_549983970_bRCkYfk0P6PP5fKbMhZMIb07mCJ6esXL.jpg",
+  },
 });
 
-userSchema.statics.findByCredentials = async function(email, password) {
-  const user = await this.findOne({ email });
+userSchema.methods.comparePassword = function (candidatePassword, cb) {
+  bcrypt.compare(candidatePassword, this.password, function (err, isMatch) {
+    if (err) return cb(err);
+    cb(null, isMatch);
+  });
+};
 
-  if (!user) {
-    throw new Error('Invalid login credentials');
-  }
-
-  const isPasswordMatch = await bcrypt.compare(password, user.password);
-  if (!isPasswordMatch) {
-    throw new Error('Invalid login credentials');
-  }
-
-  return user;
-}
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);

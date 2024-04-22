@@ -27,7 +27,7 @@ export class AuthGoogleService {
 
     // Espera el evento tokenReceived antes de obtener el token de acceso
     this.oAuthService.events.subscribe(event => {
-      console.log('OAuth event:', event); // Imprime todos los eventos de OAuth
+      // console.log('OAuth event:', event);
 
       if (event.type === 'token_received') {
         const token = this.oAuthService.getIdToken();

@@ -1,8 +1,9 @@
-import { HttpClient } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { Router } from '@angular/router';
 import { AuthGoogleService } from '@services/auth-google.service';
+import { AuthService } from '@services/auth.service';
 
 const MODULES: any[] = [
   MatIconModule,
@@ -19,9 +20,10 @@ const MODULES: any[] = [
 export class LoginComponent {
   loginForm: FormGroup;
 
-  private authService = inject(AuthGoogleService);
-  private http = inject(HttpClient);
   private formBuilder: FormBuilder = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private router = inject(Router);
+  private authGoogleService = inject(AuthGoogleService);
 
   constructor() {
     this.loginForm = this.formBuilder.group({
@@ -35,18 +37,21 @@ export class LoginComponent {
       const email = this.loginForm.value.email;
       const password = this.loginForm.value.password;
 
-      this.http.post('/api/login', { email, password }).subscribe(
-        response => {
-          // Maneja la respuesta de la API
+      this.authService.login(email, password).subscribe({
+        next: response => {
+          // Redirige al usuario a la página principal
+          console.log('Response:', response);
+          this.router.navigate(['/home']);
         },
-        error => {
-          // Maneja el error
+        error: error => {
+          // Muestra un mensaje de error
+          alert('Error al iniciar sesión: ' + error.message);
         }
-      );
+      });
     }
   }
 
   signInWithGoogle() {
-    this.authService.login();
+    this.authGoogleService.login();
   }
 }

@@ -1,9 +1,9 @@
 <nav class="flex items-center justify-between p-4 text-white bg-gray-900">
   <div class="flex items-center">
     <!-- Foto de perfil del usuario autenticado -->
-    <img src="{{ profile.picture }}" alt="{{ profile.name }}" class="w-10 h-10 mr-2 rounded-full">
+    <img src="{{ currentUser?.picture }}" alt="{{ currentUser?.username }}" class="w-10 h-10 mr-2 rounded-full">
     <!-- Nombre del usuario autenticado -->
-    <h1 class="text-lg">{{ profile.name }}</h1>
+    <h1 class="text-lg">{{ currentUser?.username }}</h1>
   </div>
   <!-- Ícono para cerrar sesión -->
   <button (click)="logOut()" class="text-white hover:text-gray-300 focus:outline-none">
